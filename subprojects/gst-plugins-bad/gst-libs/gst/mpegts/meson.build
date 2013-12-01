@@ -4,6 +4,7 @@ mpegts_sources = files(
   'gstmpegtssection.c',
   'gstmpegtsdescriptor.c',
   'gst-dvb-descriptor.c',
+  'gst-isdb-descriptor.c',
   'gst-dvb-section.c',
   'gst-atsc-section.c',
   'gst-scte-section.c',
