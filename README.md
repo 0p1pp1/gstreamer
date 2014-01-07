@@ -1,3 +1,135 @@
+# gstreamer-1.xを用いたDVBアクセス, TSファイル再生用パッチ #
+
+gstremer-1.20のgst-plugins-{good,bad}へISDB向けの機能追加・修正をする.
+
+## 変更箇所 ##
+
+### gst-plugins-bad モジュール ###
+
+<table border="1">
+ <tr>
+  <th> pluginライブラリ </th>  <th> エレメント名 </th>  <th> ソースディレクトリ </th>
+ </tr>
+ <tr>
+  <td> libgstdvb.so </td>  <td> dvbsrc, dvbbasebin </td>  <td> sys/dvb/ </td>
+ </tr>
+ <tr>
+  <td> libgstmpegtsdemux.so </td>  <td> tsdemux,tsparse </td>  <td> gst/mpegtsdemux/ </td>
+ </tr>
+ <tr>
+  <td> libgstfaad.so </td>  <td> faad </td>  <td> ext/faad/ </td>
+ </tr>
+ <tr></tr>
+ <tr>
+  <td> libgstmpegts-1.0.so </td>  <td> (mpegtsライブラリ) </td>  <td> gst-libs/gst/mpegts/ </td>
+ </tr>
+</table>
+
+### gst-plugins-bad モジュール ###
+
+<table border="1">
+ <tr>
+  <th> pluginライブラリ </th>  <th> エレメント名 </th>  <th> ソースディレクトリ </th>
+ </tr>
+ <tr>
+  <td> libgstaudioparsers.so </td>  <td> aacparse </td>  <td> gst/audioparsers/ </td>
+ </tr>
+</table>
+
+## パッチの内容 ##
+
+### 主な追加/変更機能 ###
+
+ - EIT情報の取り出し・利用機能の日本向け修正
+    (イベント追従の予約録画スクリプト dvb_sched_ev3/dvbevrec3で利用)
+
+ - DVBモジュールのS2API対応 (チャンネル定義ファイルの形式)
+
+ - mplayer/mpvと同様なURI `dvb://<adapter-No>@<channel-name>`形式のサポート
+
+ - AAC音声再生機能の強化(デュアルモノ対応, チャンネル構成切り替わり対応)
+
+ - video/audioストリームの選択・指示機能の追加
+    デフォルトでメインのストリームを選択. AACデュアルモノのch指定や自動選択の追加
+
+ - tsファイル再生時のシーク機能追加
+
+ - その他再生時の不具合修正
+    playbin3でdvb://.... の再生が可能となるように。
+
+ - 外部ライブラリによるMULTI2復号機能 (要libdemulti2)
+    DVBデバイスだけでなく,保存したTSファイルにも対応
+    libdemulti2については配布しない。 インターフェースについてはdemulti2.hを参照
+
+### 本ブランチ(isdb-1.20)の内容 ###
+
+ - 本家モノレポ移行への対応, 1.20へrebase
+
+### 前ブランチ(gst-plugins-bad isdb/1.18)の内容 ###
+
+ - EPG情報を用いた、番組の受け継ぎ(リレー)視聴・録画への予備対応 \
+  (NHK BS101->BS102でのスポーツ中継番組継続などで使われる) \
+  dvb_appsの`{dvb_sched_ev3,dvbevrec3}`でリレー録画には対応したが、
+  現状では再生時にリレーできずに終わってしまう。(録画自体は続けて出来ている)
+
+ - isdb/1.16を本家1.18へrebase、本家1.18の小修正/デバッグ
+
+
+## ビルド方法 ##
+   今まで`gst-plugins-{base,good,bad,..}`として別々のプロジェクトであったのが、
+   本家gstreamer 1.20よりmonoレポ(`gstreamer`)に統合されたので、ビルド方法が変わった。
+   ビルド後にインストールせずに使用しやすくなっている(`./gst-env.py`を使用)。
+
+ 1. ソース準備
+    ブランチisdb-1.20をチェックアウトする。
+
+        git clone [--depth 1] https://github.com/0p1pp1/gstreamer.git
+        cd gstreamer; git checkout isdb-1.20
+
+ 2. 依存パッケージのインストール
+
+    自分の利用したいモジュールが外部ライブラリに依存しているならば、
+    そのdevelパッケージをインストールしておく。
+    (例えば`faad2`やISDB向け`ffmpeg`など)
+
+ 3. 構成・セットアップとビルド
+
+    詳しくは本家README.mdや`meson setup --help`を参照。
+    また、ビルドしたい/したくないモジュールの指定などのオプション設定については
+    `meson_options.txt`や`subprojects/*/meson_options.txt`を参照。
+
+        meson setup --pkg-config-path /usr/local/lib/pkgconfig \
+          -Dugly=disabled -Dges=disabled -Drtsp_server=disabled -Dvaapi=enabled \
+          -Dgst-examples=disabled -Dqt5=disabled -Dgpl=enabled -Dtests=disabled \
+          -Dexamples=disabled -Ddoc=disabled builddir
+        meson compile -C builddir
+ 
+ 4. 実行
+
+        ./gst-env.py gst-launch-1.0 ... 
+
+   `sudo meson install -C builddir`でシステムにインストールしてから実行することも可能だが、
+   ディストリのgstreamer関連パッケージと衝突しないように留意する必要がある。
+
+## 利用例 ##
+
+### DVBテスト: ###
+    gst-play-1.0 dvb://0@NHKBS1 (qでストップ)  or
+    totem dvb://0@NHKBS1
+
+  gstreamerからdvb://のURIでアクセスするためには
+  ~/.config/gstreamer-1.0/dvb-channels.conf に .mplayer/channels.conf[.s2] と同形式の
+  チャンネル定義ファイルを作成しておく必要がある。 (mplayer/mpv用のファイルにlnしても可)
+  mplayer/mpvのチャンネル定義ファイルのフォーマットの例:
+    NHK:DTV_DELIVERY_SYSTEM=8|DTV_FREQUENCY=515142857:33792
+    NHKBS1:DTV_DELIVERTY_SYSTEM=9|DTV_FREQUENCY=1318000|DTV_STREAM_ID=0x40f1:101
+
+### 予約録画とか: ###
+dvb_appsのスクリプト経由で.(詳しくはreadme-scripts.txtを参照 + 各コマンドの--help)
+
+    dvb_sched_ev3 10:00 -a 4 -c NHKBS1 -i -o ~/foo.ts
+    
+以下本家のREADME.md
 # GStreamer
 
 This is GStreamer, a framework for streaming media.
