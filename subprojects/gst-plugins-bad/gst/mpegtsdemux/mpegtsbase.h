@@ -54,11 +54,13 @@ typedef struct _MpegTSBase MpegTSBase;
 typedef struct _MpegTSBaseClass MpegTSBaseClass;
 typedef struct _MpegTSBaseStream MpegTSBaseStream;
 typedef struct _MpegTSBaseProgram MpegTSBaseProgram;
+typedef struct _MpegTSBaseECM MpegTSBaseECM;
 
 struct _MpegTSBaseStream
 {
   guint16             pid;
   guint8              stream_type;
+  guint16             ecm_pid;
 
   /* Content of the registration descriptor (if present) */
   guint32             registration_id;
@@ -74,6 +76,9 @@ struct _MpegTSBaseProgram
   gint                program_number;
   guint16             pmt_pid;
   guint16             pcr_pid;
+
+  guint16             ca_sys_id;
+  guint16             ecm_pid;
 
   /* Content of the registration descriptor (if present) */
   guint32             registration_id;
@@ -98,6 +103,13 @@ struct _MpegTSBaseProgram
 
   /* TRUE if the program shouldn't be freed */
   gboolean recycle;
+};
+
+struct _MpegTSBaseECM
+{
+  guint16 pid;
+  guint16 cas_id;
+  guint   refcount;
 };
 
 typedef enum {
@@ -127,6 +139,10 @@ struct _MpegTSBase {
   /* the following vars must be protected with the OBJECT_LOCK as they can be
    * accessed from the application thread and the streaming thread */
   GPtrArray *programs;
+  GHashTable *ecms;
+  /* for efficient pid -> (MpegTSBaseStream *) mapping in descrambling process,
+   * without searching through all programs */
+  GHashTable *stream_map;
 
   GPtrArray  *pat;
   MpegTSPacketizer2 *packetizer;
@@ -160,6 +176,10 @@ struct _MpegTSBase {
 
   /* Whether to parse private section or not */
   gboolean parse_private_sections;
+
+  /* Whether to descramble packets (ISDB only) */
+  gboolean descramble;
+  gpointer dm2_handle;
 
   /* Whether to push data and/or sections to subclasses */
   gboolean push_data;

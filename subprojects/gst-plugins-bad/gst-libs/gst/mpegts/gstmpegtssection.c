@@ -1099,6 +1099,8 @@ _identify_section (guint16 pid, guint8 table_id)
     case GST_MTS_TABLE_ID_SCTE_SPLICE:
       return GST_MPEGTS_SECTION_SCTE_SIT;
       break;
+    case GST_MTS_TABLE_ID_CA_MESSAGE_SYSTEM_PRIVATE_1:
+      return GST_MPEGTS_SECTION_ISDB_ECM;
     case GST_MTS_TABLE_ID_SELECTION_INFORMATION:
       if (pid == 0x001f)
         return GST_MPEGTS_SECTION_SIT;
