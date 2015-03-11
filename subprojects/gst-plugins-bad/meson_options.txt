@@ -195,6 +195,10 @@ option('mfx_api', type : 'combo', choices : ['MSDK', 'oneVPL', 'auto'], value : 
 option('gpl', type: 'feature', value: 'disabled', yield: true,
   description: 'Allow build plugins that have (A)GPL-licensed dependencies')
 
+# Japanese DTV descrambling with B-CAS
+option('bcas', type : 'feature', value : 'auto',
+       description: 'Enable MULTI2/BCAS descrambling of MPEG-TS from Japanese DTV')
+
 # Common feature options
 option('examples', type : 'feature', value : 'auto', yield : true)
 option('tests', type : 'feature', value : 'auto', yield : true)
