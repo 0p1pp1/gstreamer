@@ -1,5 +1,6 @@
 mpegts_sources = files(
   'mpegts.c',
+  'arib_b24_str.c',
   'gstmpegtssection.c',
   'gstmpegtsdescriptor.c',
   'gst-dvb-descriptor.c',
