@@ -1255,6 +1255,9 @@ mpegts_base_apply_pat (MpegTSBase * base, GstMpegtsSection * section)
   for (i = 0; i < pat->len; ++i) {
     GstMpegtsPatProgram *patp = g_ptr_array_index (pat, i);
 
+    if (patp->program_number == 0)
+      continue;
+
     GST_LOG ("Looking for program %d / 0x%04x", patp->program_number,
         patp->network_or_program_map_PID);
     program = mpegts_base_get_program (base, patp->program_number);
