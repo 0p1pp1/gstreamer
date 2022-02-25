@@ -83,7 +83,8 @@ enum
   PROP_UPDATE_FREQ,
   PROP_SILENT,
   PROP_DO_QUERY,
-  PROP_FORMAT
+  PROP_FORMAT,
+  PROP_STDERR
 };
 
 GstStaticPadTemplate progress_report_src_template =
@@ -102,6 +103,7 @@ GST_STATIC_PAD_TEMPLATE ("sink",
 #define DEFAULT_SILENT       FALSE
 #define DEFAULT_DO_QUERY     TRUE
 #define DEFAULT_FORMAT       "auto"
+#define DEFAULT_STDERR       FALSE
 
 static void gst_progress_report_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
@@ -168,6 +170,11 @@ gst_progress_report_class_init (GstProgressReportClass * g_class)
           "Format to use for the querying", DEFAULT_FORMAT,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
 
+  g_object_class_install_property (gobject_class,
+      PROP_STDERR, g_param_spec_boolean ("stderr", "Output to stderr",
+          "Whether to output to the stderr", DEFAULT_STDERR,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
   gst_element_class_add_static_pad_template (element_class,
       &progress_report_sink_template);
   gst_element_class_add_static_pad_template (element_class,
@@ -195,6 +202,7 @@ gst_progress_report_init (GstProgressReport * report)
   report->silent = DEFAULT_SILENT;
   report->do_query = DEFAULT_DO_QUERY;
   report->format = g_strdup (DEFAULT_FORMAT);
+  report->stderr = DEFAULT_STDERR;
 }
 
 static void
@@ -313,12 +321,15 @@ gst_progress_report_do_query (GstProgressReport * filter, GstFormat format,
   }
 
   if (!filter->silent) {
+    void (*printfunc)(const gchar *format, ...);
+
+    printfunc = filter->stderr ? g_printerr : g_print;
     if (total > 0) {
-      g_print ("%s (%02d:%02d:%02d): %" G_GINT64_FORMAT " / %"
+      printfunc ("%s (%02d:%02d:%02d): %" G_GINT64_FORMAT " / %"
           G_GINT64_FORMAT " %s (%4.1f %%)\n", GST_OBJECT_NAME (filter), hh,
           mm, ss, cur, total, format_name, (gdouble) cur / total * 100.0);
     } else {
-      g_print ("%s (%02d:%02d:%02d): %" G_GINT64_FORMAT " %s\n",
+      printfunc ("%s (%02d:%02d:%02d): %" G_GINT64_FORMAT " %s\n",
           GST_OBJECT_NAME (filter), hh, mm, ss, cur, format_name);
     }
   }
@@ -367,7 +378,10 @@ gst_progress_report_report (GstProgressReport * filter, gint64 cur_time_s,
   }
 
   if (!done && !filter->silent) {
-    g_print ("%s (%2d:%2d:%2d): Could not query position and/or duration\n",
+    void (*printfunc)(const gchar *format, ...);
+
+    printfunc = filter->stderr ? g_printerr : g_print;
+    printfunc ("%s (%2d:%2d:%2d): Could not query position and/or duration\n",
         GST_OBJECT_NAME (filter), hh, mm, ss);
   }
 
@@ -481,6 +495,11 @@ gst_progress_report_set_property (GObject * object, guint prop_id,
         filter->format = g_strdup ("auto");
       GST_OBJECT_UNLOCK (filter);
       break;
+    case PROP_STDERR:
+      GST_OBJECT_LOCK (filter);
+      filter->stderr = g_value_get_boolean (value);
+      GST_OBJECT_UNLOCK (filter);
+      break;
     default:
       break;
   }
@@ -513,6 +532,11 @@ gst_progress_report_get_property (GObject * object, guint prop_id,
     case PROP_FORMAT:
       GST_OBJECT_LOCK (filter);
       g_value_set_string (value, filter->format);
+      GST_OBJECT_UNLOCK (filter);
+      break;
+    case PROP_STDERR:
+      GST_OBJECT_LOCK (filter);
+      g_value_set_boolean (value, filter->stderr);
       GST_OBJECT_UNLOCK (filter);
       break;
     default:
