@@ -899,10 +899,11 @@ mpegts_parse_push (MpegTSBase * base, MpegTSPacketizerPacket * packet,
           tspad->flow_return = GST_FLOW_OK;
         else
           tspad->flow_return =
-            mpegts_parse_tspad_push_section (parse, tspad, section, packet, buf);
+            mpegts_parse_tspad_push_section (parse, tspad, section, packet,
+            gst_buffer_ref (buf));
       } else {
         tspad->flow_return =
-            mpegts_parse_tspad_push (parse, tspad, packet, buf);
+            mpegts_parse_tspad_push (parse, tspad, packet, gst_buffer_ref (buf));
       }
       tspad->pushed = TRUE;
 
