@@ -188,7 +188,7 @@ seen_section_before (MpegTSPacketizerStream * stream, guint8 table_id,
     return (memcmp (stream->section_data, data_start, to_read) != 0);
   }
 
-  return FALSE;
+  return TRUE;
 }
 
 static MpegTSPacketizerStreamSubtable *
