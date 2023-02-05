@@ -1056,6 +1056,9 @@ mpegts_packetizer_push_section (MpegTSPacketizer2 * packetizer,
 accumulate_data:
   /* If not the beginning of a new section, accumulate what we have */
   stream->continuity_counter = packet_cc;
+  /* skip non-PUSI (accumulating) packets of an already-seen section */
+  if (stream->section_length == 0)
+    goto out;
   to_read = MIN (stream->section_length - stream->section_offset,
       packet->data_end - data_start);
   memcpy (stream->section_data + stream->section_offset, data_start, to_read);
@@ -1208,7 +1211,7 @@ section_start:
         section_number);
     /* skip data and see if we have more sections after */
     data = data_start + to_read;
-    if (data == packet->data_end || *data == 0xff)
+    if (data > packet->data_end - 3 || *data == 0xff)
       goto out;
     goto section_start;
   }
